@@ -9,8 +9,8 @@ local function getTotalGradOutput(node)
 	local gradOutput = node.data.gradOutput
 	assert(istable(gradOutput), "expecting gradients to sum")
 	if #gradOutput > 1 then
-		node.data.gradOutputBuffer = node.data.gradOutputBuffer or nesting.cloneNested(gradOutput[1])
-		local gobuff = node.data.gradOutputBuffer
+		node.data.shareable.gradOutputBuffer = node.data.shareable.gradOutputBuffer or nesting.cloneNested(gradOutput[1])
+		local gobuff = node.data.shareable.gradOutputBuffer
 		nesting.resizeNestedAs(gobuff, gradOutput[1])
 		nesting.fillNested(gobuff, 0)
 		for i=1,#gradOutput do
@@ -232,7 +232,7 @@ function gModule:updateGradInput(input,gradOutput)
 					input = input[1]
 				end
 				local module = node.data.module
-				gradInput = module:updateGradInput(input,gradOutput)
+				gradInput = module:backward(input,gradOutput)
 			end
 			-- propagate the output to children
 			for i,child in ipairs(node.children) do
@@ -272,34 +272,6 @@ function gModule:updateGradInput(input,gradOutput)
 	assert(#self.innode.data.gradOutput == 1, "expecting the innode to be used only once")
 	self.gradInput = self.innode.data.gradOutput[1]
 	return self.gradInput
-end
-
-function gModule:accGradParameters(input,gradOutput,lr)
-	local function neteval(node)
-		if node.data.module then
-			local module = node.data.module
-			local gradOutput = node.data.gradOutput[1]
-			if #node.data.gradOutput > 1 then
-				gradOutput = node.data.gradOutputBuffer
-			end
-			local input = node.data.input
-			if #input == 1 then
-				input = input[1]
-			end
-			-- accGradParameters through this node
-			module:accGradParameters(input,gradOutput,lr)
-		end
-		if self.verbose then
-			print(' V : ' .. node:label())
-		end
-	end
-	local outnode = self.outnode
-	if #outnode.children > 1 and #gradOutput ~= #outnode.children then
-		error(string.format('Got %s gradOutputs instead of %s', #gradOutput, #outnode.children))
-	end
-	for i,node in ipairs(self.backwardnodes) do
-		neteval(node)
-	end
 end
 
 function gModule:parameters()

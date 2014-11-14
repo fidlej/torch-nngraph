@@ -10,6 +10,7 @@ local nnNode,parent = torch.class('nngraph.Node','graph.Node')
 function nnNode:__init(data)
 	parent.__init(self,data)
 	self.data.mapindex = self.data.mapindex or {}
+	self.data.shareable = {}
 end
 
 -- domap ensures that this node will keep track of the order its children are added.
@@ -83,7 +84,7 @@ function nnNode:label()
 				vstr = getmapindexstr(v)
 				table.insert(lbl, k .. ' = ' .. vstr)
 			end
-		elseif k=='forwardNodeId' then
+		elseif k=='forwardNodeId' or k =='shareable' then
 			-- the forwardNodeId is not displayed in the label.
 		else
 			vstr = getstr(v)
