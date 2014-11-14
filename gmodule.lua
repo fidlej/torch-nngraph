@@ -9,6 +9,7 @@ local function getTotalGradOutput(node)
 	local gradOutput = node.data.gradOutput
 	assert(istable(gradOutput), "expecting gradients to sum")
 	if #gradOutput > 1 then
+		node.data.shareable = node.data.shareable or {}
 		node.data.shareable.gradOutputBuffer = node.data.shareable.gradOutputBuffer or nesting.cloneNested(gradOutput[1])
 		local gobuff = node.data.shareable.gradOutputBuffer
 		nesting.resizeNestedAs(gobuff, gradOutput[1])
@@ -115,6 +116,12 @@ end
 
 function gModule:type(type)
 	self:apply(function(module) module:type(type) end)
+	for _,node in ipairs(self.forwardnodes) do
+		local shareable = node.data.shareable or {}
+		for k,v in pairs(shareable) do
+			shareable[k] = v:type(type)
+		end
+	end
 	return self
 end
 
